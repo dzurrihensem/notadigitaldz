@@ -79,8 +79,14 @@ async function viewHome() {
   <section class="hero">
     <div class="hero-grid">
       <div>
-        <div class="eyebrow">Pendidikan Seni Muzik · Tingkatan 4</div>
-        <h1>${esc(S.hubTitle)}</h1>
+        <div class="hero-id">
+          <div class="creator-photo"><img src="${CREATOR_IMG}" alt="Cikgu Dzurri" width="132" height="152"></div>
+          <div class="hero-name">
+            <div class="eyebrow">Pendidikan Seni Muzik · Tingkatan 4</div>
+            <h1>${esc(S.hubTitle)}</h1>
+            <div class="by">Dicipta oleh <b>Cikgu Dzurri</b><span class="copy">copyright@dzurrihensem</span></div>
+          </div>
+        </div>
         <p>Tonton setiap video, kemudian jawab kuiz untuk menguji kefahaman anda. Kuiz akan dibuka selepas anda menonton sekurang-kurangnya ${Math.round(WATCH_REQUIRED * 100)}% video.</p>
         ${waveBars(48)}
       </div>
@@ -109,16 +115,7 @@ async function viewHome() {
         <div class="mod-meta"><span class="chip">${fmtDur(m.dur)} min</span><span class="chip">${QUIZ[m.code].length} soalan</span>${status(m.code)}</div>
       </div>
     </a>`).join('')}
-  </div>
-  <section class="card creator" aria-label="Pencipta">
-    <img src="${CREATOR_IMG}" alt="Cikgu Dzurri, pencipta hub ini" width="120" height="138">
-    <div class="creator-text">
-      <div class="eyebrow">Pencipta</div>
-      <h2>Dzurri</h2>
-      <p class="muted">Guru Pendidikan Seni Muzik. Pencipta siri video, kuiz dan Hub Pembelajaran ${esc(S.name)} untuk murid Tingkatan 4.</p>
-      <span class="chip">copyright@dzurrihensem</span>
-    </div>
-  </section>`;
+  </div>`;
   bindProfile(viewHome);
   const ed = $('#editProfile'); if (ed) ed.addEventListener('click', e => { e.preventDefault(); const p = profile; profile = null; viewHome().then(() => { profile = p; $('#pName').value = p.name; $('#pKelas').value = p.kelas; }); });
 }
@@ -372,7 +369,7 @@ async function adminScores() {
 
 // ------------------------------------------------------------ boot
 (async function boot() {
-  document.title = S.hubTitle; $('#brandTitle').textContent = S.name; $('#brandSub').textContent = 'Hub Pembelajaran · Tingkatan 4'; $('#yr').textContent = new Date().getFullYear();
+  document.title = S.hubTitle; $('#brandTitle').textContent = S.name; $('#brandSub').textContent = 'oleh Cikgu Dzurri · copyright@dzurrihensem'; $('#yr').textContent = new Date().getFullYear();
   if (isDemo) $('#demoBar').hidden = false;
   app.innerHTML = '<div class="empty">Memuatkan…</div>';
   try { videos = await backend.listVideos(); } catch (e) { console.error(e); toast('Gagal memuatkan senarai video.'); }

@@ -16,12 +16,12 @@ export const ADMIN_EMAIL = 'admin@hubmuzik.my';
 // Selagi apiKey kosong, aplikasi berjalan dalam MOD DEMO (data disimpan
 // dalam pelayar ini sahaja) supaya anda boleh mencuba dahulu.
 export const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyCsy69qX2YSvQehkO5ee6wdsspy6lUyK30',
+  authDomain: 'notadigitaldz.firebaseapp.com',
+  projectId: 'notadigitaldz',
+  storageBucket: 'notadigitaldz.firebasestorage.app',
+  messagingSenderId: '512824735666',
+  appId: '1:512824735666:web:23109e346de938da1116ab',
 };
 
 // Peratus video yang mesti ditonton sebelum kuiz dibuka.
