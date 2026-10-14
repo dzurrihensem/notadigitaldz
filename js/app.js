@@ -17,6 +17,25 @@ const ICON = {
   key: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></svg>',
 };
 
+// ------------------------------------------------------------ video links
+let ytPromise = null;
+function loadYouTube() {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if (!ytPromise) ytPromise = new Promise((res, rej) => {
+    window.onYouTubeIframeAPIReady = () => res(window.YT);
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.onerror = rej; document.head.appendChild(s);
+  });
+  return ytPromise;
+}
+export function parseLink(raw) {
+  const url = String(raw || '').trim(); let mm;
+  if ((mm = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([A-Za-z0-9_-]{11})/))) return { type: 'youtube', id: mm[1], url };
+  if ((mm = url.match(/drive\.google\.com\/(?:file\/d\/|open\?(?:.*&)?id=|uc\?(?:.*&)?id=)([A-Za-z0-9_-]{20,})/))) return { type: 'drive', id: mm[1], url };
+  if (/^https:\/\/\S+\.(mp4|webm|m4v)(\?\S*)?$/i.test(url)) return { type: 'mp4', id: '', url };
+  return null;
+}
+const TYPE_LABEL = { youtube: 'YouTube', drive: 'Google Drive', mp4: 'Fail MP4' };
+
 // ------------------------------------------------------------ local state
 const LS = k => `hub-${SUBJECT}-${k}`;
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(LS(k))) ?? d; } catch { return d; } };
@@ -130,13 +149,16 @@ async function viewModule(code) {
   <div class="mod-layout">
     <div>
       <div class="card player">
-        ${v ? `<video id="vid" controls playsinline preload="metadata" src="${esc(v.url)}"></video>` :
-          `<div class="player-empty"><strong style="font-size:18px;color:var(--primary)">Video belum dimuat naik</strong><span>Admin akan memuat naik video ${m.code} tidak lama lagi.</span></div>`}
+        ${!v ? `<div class="player-empty"><strong style="font-size:18px;color:var(--primary)">Video belum tersedia</strong><span>Admin akan memasukkan video ${m.code} tidak lama lagi.</span></div>`
+          : v.type === 'youtube' ? `<div class="embed"><div id="ytp"></div></div>`
+          : v.type === 'drive' ? `<div class="embed"><iframe src="https://drive.google.com/file/d/${esc(v.id)}/preview" allow="autoplay; fullscreen" allowfullscreen title="${esc(m.title)}"></iframe></div>`
+          : `<video id="vid" controls playsinline preload="metadata" src="${esc(v.url)}"></video>`}
         <div class="player-info">
           <span class="eyebrow">${m.code} · ${esc(S.name)}</span>
           <h1>${esc(m.title)}</h1>
           <p class="muted" style="margin:0">${esc(m.desc)}</p>
           <div class="watch-row"><span>Tontonan</span><div class="bar"><i id="watchBar" style="width:${Math.round(p.watched * 100)}%"></i></div><span id="watchPct" class="mono">${Math.round(p.watched * 100)}%</span></div>
+          <div id="watchRowNote" class="muted" style="font-size:12.5px"></div>
         </div>
       </div>
       <section class="card quiz" id="quiz"></section>
@@ -163,26 +185,45 @@ async function viewModule(code) {
   };
   renderSteps();
 
-  // watch tracking: count only seconds actually played (skipping does not count)
-  const vid = $('#vid');
-  if (vid) {
-    const seen = new Set(load(`seen-${code}`, []));
-    let lastT = 0;
+  // ---------------- watch tracking (hanya saat yang benar-benar dimainkan dikira)
+  const seen = new Set(load(`seen-${code}`, []));
+  const setWatched = w => {
+    w = Math.min(1, w); if (w <= p.watched) return;
+    const wasLocked = p.watched < WATCH_REQUIRED; p.watched = w; save('progress', progress); save(`seen-${code}`, [...seen]);
+    $('#watchBar').style.width = Math.round(w * 100) + '%'; $('#watchPct').textContent = Math.round(w * 100) + '%';
+    if (wasLocked && w >= WATCH_REQUIRED) { renderSteps(); renderQuiz(); toast('Kuiz telah dibuka!'); }
+  };
+  const timers = [];
+  window._cleanup = () => { timers.forEach(clearInterval); save(`seen-${code}`, [...seen]); const vv = $('#vid'); if (vv) vv.pause(); };
+  if (v && v.type === 'youtube') {
+    loadYouTube().then(YT => {
+      if (!$('#ytp')) return;
+      let last = -1;
+      const player = new YT.Player('ytp', { videoId: v.id, playerVars: { rel: 0, modestbranding: 1, playsinline: 1 } });
+      timers.push(setInterval(() => {
+        try {
+          if (player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING) {
+            const t = player.getCurrentTime(); if (last >= 0 && Math.abs(t - last) < 2.5) seen.add(Math.floor(t)); last = t;
+            const d = player.getDuration() || m.dur; setWatched(seen.size / Math.max(1, Math.floor(d) - 1));
+          } else last = -1;
+        } catch (e) { }
+      }, 1000));
+    }).catch(() => toast('Pemain YouTube gagal dimuatkan. Semak sambungan internet.'));
+  } else if (v && v.type === 'drive') {
+    // Pemain Google Drive tidak mendedahkan masa tontonan: kira masa halaman dibuka & kelihatan
+    let secs = load(`drive-${code}`, 0);
+    $('#watchRowNote').textContent = 'Video Google Drive: kemajuan dikira berdasarkan masa anda berada di halaman ini.';
+    timers.push(setInterval(() => { if (document.visibilityState === 'visible') { secs++; save(`drive-${code}`, secs); setWatched(secs / m.dur); } }, 1000));
+  } else if (v) {
+    const vid = $('#vid'); let lastT = 0;
     const update = () => {
       const d = vid.duration || m.dur; const t = Math.floor(vid.currentTime);
       if (!vid.seeking && !vid.paused && Math.abs(vid.currentTime - lastT) < 2) seen.add(t);
-      lastT = vid.currentTime;
-      const w = Math.min(1, seen.size / Math.max(1, Math.floor(d)));
-      if (w > p.watched) {
-        const wasLocked = p.watched < WATCH_REQUIRED; p.watched = w; save('progress', progress); save(`seen-${code}`, [...seen]);
-        $('#watchBar').style.width = Math.round(w * 100) + '%'; $('#watchPct').textContent = Math.round(w * 100) + '%';
-        if (wasLocked && w >= WATCH_REQUIRED) { renderSteps(); renderQuiz(); toast('Kuiz telah dibuka!'); }
-      }
+      lastT = vid.currentTime; setWatched(seen.size / Math.max(1, Math.floor(d)));
     };
     vid.addEventListener('timeupdate', update);
     vid.addEventListener('seeked', () => { lastT = vid.currentTime; });
     vid.addEventListener('ended', () => { update(); if (p.watched < WATCH_REQUIRED) toast(`Anda telah menonton ${Math.round(p.watched * 100)}%. Tonton bahagian yang dilangkau untuk membuka kuiz.`); });
-    window._cleanup = () => { save(`seen-${code}`, [...seen]); vid.pause(); };
   }
 
   // ---------------- quiz
@@ -296,31 +337,33 @@ async function viewAdmin() {
 function adminVideos() {
   const body = $('#adminBody');
   const ready = MODS.filter(m => videos[m.code]).length;
-  body.innerHTML = `<div class="card"><div class="filters" style="justify-content:space-between"><span><b>${ready}/${MODS.length}</b> video telah dimuat naik</span><span class="muted" style="font-size:13px">Format MP4 disyorkan. Klik "Pilih fail" atau seret fail video ke baris modul.</span></div>
-  <div class="tbl-wrap"><table class="tbl stack"><thead><tr><th>Modul</th><th>Tajuk</th><th>Status</th><th style="text-align:right">Tindakan</th></tr></thead><tbody>
-  ${MODS.map(m => { const v = videos[m.code]; return `<tr class="drop" data-code="${m.code}"><td class="mono">${m.code}</td><td>${esc(m.title)}</td>
-    <td class="up-cell">${v ? `<span class="chip ok">Sedia</span> <span class="muted" style="font-size:12.5px">${v.size ? fmtSize(v.size) + ' · ' : ''}${fmtDate(v.uploadedAt)}</span>` : '<span class="chip">Belum dimuat naik</span>'}
-      <div class="up-bar" hidden><div class="bar"><i style="width:0%"></i></div><span class="muted mono" style="font-size:12px">0%</span></div></td>
-    <td><div class="up-actions"><input type="file" accept="video/*" hidden><button class="btn btn-primary btn-sm" data-act="pick">${v ? 'Ganti' : 'Pilih fail'}</button>
-      ${v ? `<a class="btn btn-ghost btn-sm" href="#/modul/${m.code}">Pratonton</a><button class="btn btn-danger btn-sm" data-act="del">Padam</button>` : ''}</div></td></tr>`; }).join('')}
+  body.innerHTML = `<div class="card pad howto">
+    <b>Cara mendapatkan pautan video</b>
+    <div class="howto-grid">
+      <div><span class="chip info">YouTube (disyorkan)</span><ol><li>Muat naik video ke YouTube.</li><li>Pada <b>Keterlihatan</b>, pilih <b>Tidak tersenarai</b> (Unlisted).</li><li>Klik <b>Kongsi</b> dan salin pautan, contoh <span class="mono">https://youtu.be/…</span></li></ol><span class="muted">Aplikasi mengesan tontonan sebenar (syarat ${Math.round(WATCH_REQUIRED * 100)}%).</span></div>
+      <div><span class="chip">Google Drive</span><ol><li>Muat naik video ke Google Drive.</li><li>Klik kanan → <b>Kongsi</b> → Akses umum: <b>Sesiapa sahaja yang ada pautan</b>.</li><li>Klik <b>Salin pautan</b>.</li></ol><span class="muted">Kemajuan dikira berdasarkan masa murid berada di halaman video.</span></div>
+    </div></div>
+  <div class="card"><div class="filters" style="justify-content:space-between"><span><b>${ready}/${MODS.length}</b> video telah dimasukkan</span><span class="muted" style="font-size:13px">Tampal pautan YouTube atau Google Drive, kemudian klik Simpan.</span></div>
+  <div class="tbl-wrap"><table class="tbl stack"><thead><tr><th>Modul</th><th>Tajuk</th><th>Pautan video</th><th style="text-align:right">Tindakan</th></tr></thead><tbody>
+  ${MODS.map(m => { const v = videos[m.code]; return `<tr data-code="${m.code}"><td class="mono">${m.code}</td><td>${esc(m.title)}</td>
+    <td class="up-cell" style="min-width:300px"><input class="input link-in" id="link-${m.code}" placeholder="https://youtu.be/…  atau  https://drive.google.com/file/d/…" value="${esc(v?.url || '')}" style="padding:8px 12px">
+      <div class="link-status" style="margin-top:6px;font-size:12.5px">${v ? `<span class="chip ok">${TYPE_LABEL[v.type] || 'Video'}</span> <span class="muted">${fmtDate(v.uploadedAt)}</span>` : '<span class="chip">Belum dimasukkan</span>'}</div></td>
+    <td><div class="up-actions"><button class="btn btn-primary btn-sm" data-act="save">Simpan</button>
+      ${v ? `<a class="btn btn-ghost btn-sm" href="#/modul/${m.code}">Pratonton</a><button class="btn btn-danger btn-sm" data-act="del">Buang</button>` : ''}</div></td></tr>`; }).join('')}
   </tbody></table></div></div>`;
   body.querySelectorAll('tr[data-code]').forEach(tr => {
-    const code = tr.dataset.code; const input = tr.querySelector('input[type=file]');
-    const doUpload = async file => {
-      if (!file) return; if (!file.type.startsWith('video/')) { toast('Sila pilih fail video (MP4).'); return; }
-      const bar = tr.querySelector('.up-bar'); bar.hidden = false; tr.querySelectorAll('button').forEach(b => b.disabled = true);
-      try {
-        await backend.uploadVideo(code, file, f => { bar.querySelector('i').style.width = Math.round(f * 100) + '%'; bar.querySelector('span').textContent = Math.round(f * 100) + '%'; });
-        videos = await backend.listVideos(); toast(`${code} berjaya dimuat naik.`); adminVideos();
-      } catch (e) { console.error(e); toast('Muat naik gagal: ' + (e.code || e.message)); adminVideos(); }
+    const code = tr.dataset.code; const input = tr.querySelector('.link-in'); const st = tr.querySelector('.link-status');
+    input.addEventListener('input', () => { const L = parseLink(input.value); st.innerHTML = !input.value.trim() ? '<span class="chip">Belum dimasukkan</span>' : L ? `<span class="chip info">Dikesan: ${TYPE_LABEL[L.type]}</span>` : '<span class="chip bad">Pautan tidak dikenali. Guna pautan YouTube atau Google Drive.</span>'; });
+    const save_ = async () => {
+      const L = parseLink(input.value); if (!L) { toast('Pautan tidak dikenali. Guna pautan YouTube atau Google Drive.'); input.focus(); return; }
+      const btn = tr.querySelector('[data-act=save]'); btn.disabled = true; btn.textContent = 'Menyimpan…';
+      try { await backend.setVideo(code, L); videos = await backend.listVideos(); toast(`${code} disimpan (${TYPE_LABEL[L.type]}).`); adminVideos(); }
+      catch (e) { console.error(e); toast('Gagal menyimpan: ' + (e.code === 'permission-denied' ? 'tiada kebenaran. Semak Firestore Rules.' : (e.code || e.message))); btn.disabled = false; btn.textContent = 'Simpan'; }
     };
-    tr.querySelector('[data-act=pick]').onclick = () => input.click();
-    input.onchange = () => doUpload(input.files[0]);
+    tr.querySelector('[data-act=save]').onclick = save_;
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') save_(); });
     const del = tr.querySelector('[data-act=del]');
-    if (del) del.onclick = async () => { if (!armed(del, 'Klik lagi untuk sahkan')) return; try { await backend.deleteVideo(code); videos = await backend.listVideos(); toast(`${code} dipadam.`); adminVideos(); } catch (e) { toast('Gagal memadam: ' + (e.code || e.message)); } };
-    tr.addEventListener('dragover', e => { e.preventDefault(); tr.classList.add('over'); });
-    tr.addEventListener('dragleave', () => tr.classList.remove('over'));
-    tr.addEventListener('drop', e => { e.preventDefault(); tr.classList.remove('over'); doUpload(e.dataTransfer.files[0]); });
+    if (del) del.onclick = async () => { if (!armed(del, 'Klik lagi untuk sahkan')) return; try { await backend.deleteVideo(code); videos = await backend.listVideos(); toast(`Pautan ${code} dibuang.`); adminVideos(); } catch (e) { toast('Gagal membuang: ' + (e.code || e.message)); } };
   });
 }
 async function adminScores() {

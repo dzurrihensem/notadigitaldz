@@ -1,6 +1,6 @@
 # Hub Pembelajaran Muzik Komputer
 
-Aplikasi web ringkas untuk murid menonton siri video Muzik Komputer dan menjawab kuiz. Markah dihantar ke Firebase, dan admin boleh memuat naik video serta menyemak markah murid.
+Aplikasi web ringkas untuk murid menonton siri video Muzik Komputer dan menjawab kuiz. Video dimainkan dari pautan YouTube atau Google Drive, markah disimpan di Firebase Firestore (percuma, pelan Spark, tanpa kad), dan admin boleh memasukkan pautan video serta menyemak markah murid.
 
 Aplikasi ini ialah laman statik (HTML, CSS dan JavaScript sahaja). Tiada proses *build*, jadi ia boleh terus di-*deploy* ke Vercel.
 
@@ -16,7 +16,8 @@ Aplikasi ini ialah laman statik (HTML, CSS dan JavaScript sahaja). Tiada proses 
 
 **Untuk admin**
 - Log masuk dengan kata laluan.
-- Muat naik, ganti atau padam video bagi setiap modul. Fail boleh dipilih atau diseret masuk, dan bar kemajuan dipaparkan semasa muat naik.
+- Tampal pautan YouTube atau Google Drive bagi setiap modul. Aplikasi mengenal pasti jenis pautan secara automatik.
+- YouTube (disyorkan): tontonan sebenar dijejak untuk syarat 85%. Google Drive: kemajuan dikira berdasarkan masa di halaman video.
 - Semak markah murid: tapis mengikut nama, kelas atau modul, dan pilih untuk melihat markah terbaik sahaja.
 - Ringkasan markah: jumlah percubaan, bilangan murid, purata markah dan peratus murid yang mencapai 60% ke atas.
 - Muat turun markah dalam fail CSV (boleh dibuka dalam Excel), dan padam rekod.
@@ -31,7 +32,6 @@ js/data.js          Senarai modul dan bank soalan kuiz (boleh diedit)
 js/backend.js       Sambungan Firebase / Mod Demo
 js/app.js           Logik aplikasi
 firestore.rules     Peraturan keselamatan Firestore
-storage.rules       Peraturan keselamatan Storage
 vercel.json         Tetapan Vercel (membenarkan aplikasi dibenam dalam aplikasi lain)
 ```
 
@@ -46,8 +46,6 @@ Selagi `firebaseConfig.apiKey` dalam `js/config.js` masih kosong, aplikasi berja
 ### 1. Cipta projek Firebase
 1. Pergi ke https://console.firebase.google.com dan klik **Add project**.
 2. Berikan nama projek, contohnya `hub-muzik-t4`. Google Analytics tidak diperlukan.
-
-> **Penting tentang Storage:** Google kini mewajibkan pelan **Blaze** (bayar ikut guna) untuk menggunakan Cloud Storage bagi projek baharu. Pelan Blaze masih ada kuota percuma yang mencukupi untuk 16 video kecil (kira-kira 10 hingga 25 MB setiap satu). Anda perlu memautkan akaun pembayaran (kad) di **Upgrade**. Untuk mengelakkan caj yang tidak dijangka, tetapkan *budget alert* di Google Cloud Console > Billing > Budgets & alerts.
 
 ### 2. Daftar aplikasi web dan salin konfigurasi
 1. Pergi ke **Project settings** (ikon gear), kemudian **General**.
@@ -68,11 +66,10 @@ Kata laluan ini disemak oleh Firebase dan **tidak disimpan dalam kod aplikasi**.
 2. Pilih **Production mode**.
 3. Di tab **Rules**, padam semua kandungan, tampal isi fail `firestore.rules`, kemudian klik **Publish**.
 
-### 5. Storage (fail video)
-1. Pergi ke **Build > Storage > Get started**. Naik taraf ke pelan Blaze jika diminta.
-2. Di tab **Rules**, tampal isi fail `storage.rules`, kemudian klik **Publish**.
+### 5. Video (tiada Firebase Storage diperlukan)
+Video tidak disimpan di Firebase. Muat naik video ke **YouTube** (Keterlihatan: *Tidak tersenarai*) atau **Google Drive** (Kongsi: *Sesiapa sahaja yang ada pautan*), kemudian tampal pautannya di panel Admin. Pelan Blaze **tidak** diperlukan.
 
-> Jika anda menukar `ADMIN_EMAIL`, tukar juga e-mel yang sama di dalam `firestore.rules` dan `storage.rules`.
+> Jika anda menukar `ADMIN_EMAIL`, tukar juga e-mel yang sama di dalam `firestore.rules`.
 
 ## Deploy ke Vercel
 
@@ -90,7 +87,7 @@ vercel --prod
 
 Selepas deploy, Vercel memberikan pautan seperti `https://hub-muzik-komputer.vercel.app`.
 
-1. Buka pautan itu, pergi ke **Admin**, log masuk dan muat naik video MK01 hingga MK06 dari komputer anda.
+1. Buka pautan itu, pergi ke **Admin**, log masuk dan tampal pautan video MK01 hingga MK06.
 2. Masukkan pautan tersebut ke dalam aplikasi **Dzurri Playverse**. Fail `vercel.json` membenarkan aplikasi ini dibenam (*iframe*) dalam aplikasi lain.
 
 ## Membina hub kedua (Aural dan Teori Muzik)
@@ -108,6 +105,6 @@ Buka `js/data.js`. Setiap soalan mempunyai medan berikut:
 - `e`: penerangan yang dipaparkan semasa semakan jawapan
 
 ## Nota
-- Format video: **MP4 (H.264)** paling serasi dengan semua pelayar dan telefon.
+- YouTube paling lancar di telefon. Google Drive mungkin menyekat sementara jika terlalu ramai menonton serentak.
 - Murid tidak perlu log masuk. Markah direkod mengikut nama dan kelas yang mereka masukkan, jadi ingatkan murid supaya menulis nama penuh dengan betul.
 - Kemajuan tontonan murid disimpan dalam pelayar peranti masing-masing.

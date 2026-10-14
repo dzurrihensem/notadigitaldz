@@ -230,3 +230,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .foot-by img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; object-position: top; box-shadow: 0 2px 6px rgba(15, 23, 42, .2); }
 @media (max-width: 560px) { .hero-id { flex-direction: column; align-items: flex-start; gap: 16px; } .creator-photo { width: 108px; height: 124px; } }
 @media (prefers-reduced-motion: reduce) { .creator-photo { transform: none; } }
+
+/* ---------- embedded players / link admin ---------- */
+.embed { position: relative; width: 100%; aspect-ratio: 16/9; max-width: 100%; background: #000; }
+.embed iframe, .embed #ytp, .embed > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.howto { margin-bottom: 16px; }
+.howto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px; font-size: 13.5px; }
+.howto-grid ol { margin: 8px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 720px) { .howto-grid { grid-template-columns: 1fr; } }

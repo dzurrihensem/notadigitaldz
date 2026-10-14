@@ -1,0 +1,16 @@
+CARA KEMAS KINI LAMAN VERCEL (notadigitaldz.vercel.app)
+=======================================================
+
+1. Buka repositori GitHub anda (yang disambung ke Vercel).
+2. Klik "Add file" -> "Upload files".
+3. Buka folder HubMuzikKomputer_BARU ini di Finder.
+4. Pilih SEMUA kandungan di dalamnya (Cmd + A), kemudian seret ke halaman GitHub.
+   Fail lama dengan nama yang sama akan diganti secara automatik.
+5. Klik "Commit changes".
+6. Tunggu kira-kira 1 minit sehingga Vercel selesai deploy.
+7. Buka notadigitaldz.vercel.app dan tekan Cmd + Shift + R.
+
+TANDA BERJAYA:
+- Gambar Cikgu Dzurri ada di bahagian atas.
+- Tiada bar kuning "Mod Demo".
+- Di Admin > Video, setiap modul ada kotak untuk tampal pautan YouTube / Google Drive.
