@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@hubmuzik.my';
+    }
+    match /videos/{hub}/{file} {
+      allow read: if true;
+      // muat naik: admin sahaja, fail video, maksimum 500 MB
+      allow create, update: if isAdmin()
+        && request.resource.contentType.matches('video/.*')
+        && request.resource.size < 500 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+  }
+}

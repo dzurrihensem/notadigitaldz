@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub Pembelajaran Muzik</title>
+<meta name="description" content="Hub pembelajaran interaktif Pendidikan Seni Muzik Tingkatan 4: tonton video dan jawab kuiz.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d3a8a'/%3E%3Cpath d='M7 18v-4M11 22V10M15 20v-8M19 24V8M23 19v-6M27 17v-2' stroke='%2367e8f9' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#/">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="brand-text"><strong id="brandTitle">Hub Pembelajaran</strong><small id="brandSub">Pendidikan Seni Muzik T4</small></span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="#/" data-r="home">Utama</a>
+      <a href="#/markah" data-r="markah">Markah Saya</a>
+      <a href="#/admin" data-r="admin" class="nav-admin">Admin</a>
+    </nav>
+  </div>
+</header>
+<div id="demoBar" class="demo-bar" hidden>Mod Demo: Firebase belum disambungkan. Data hanya disimpan dalam pelayar ini. Rujuk README.md untuk sambungan Firebase.</div>
+<main id="app" class="wrap" tabindex="-1"></main>
+<footer class="foot wrap">
+  <span class="foot-by"><img src="img/creator.jpg" alt="" width="28" height="28" id="footImg"> Dicipta oleh <b>Dzurri</b> · copyright@dzurrihensem</span>
+  <span class="muted">Pendidikan Seni Muzik Tingkatan 4 · <span id="yr"></span></span>
+</footer>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
